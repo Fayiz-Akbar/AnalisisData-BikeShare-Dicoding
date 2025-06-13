@@ -3,9 +3,32 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import streamlit as st
 sns.set(style='dark')
-
-all_df = pd.read_csv("https://raw.githubusercontent.com/anandashadrina/BikeSharingDataset-Dicoding/main/dashboard/main_data.csv")
     
+urls = [
+    "https://raw.githubusercontent.com/Fayiz-Akbar/AnalisisData-BikeShare-Dicoding/main/data/day.csv",
+    "https://raw.githubusercontent.com/Fayiz-Akbar/AnalisisData-BikeShare-Dicoding/main/data/hour.csv"
+]
+
+all_df = pd.concat([pd.read_csv(url) for url in urls], ignore_index=True)
+
+season_map = {
+    1: 'Spring',
+    2: 'Summer',
+    3: 'Fall',
+    4: 'Winter'
+}
+
+weather_map = {
+    1: 'Clear',
+    2: 'Cloudy',
+    3: 'Light Snow/Rain',
+    4: 'Heavy Rain/Ice Pallets'
+}
+
+all_df['season'] = all_df['season'].map(season_map)
+all_df['weathersit'] = all_df['weathersit'].map(weather_map)
+
+
 def create_daily_rentals_df(df):
     daily_rentals_df = df.resample(rule='D', on='dteday').agg({
         "registered": "sum",
@@ -132,154 +155,26 @@ ax.grid(True)
 
 st.pyplot(fig)
 
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-import streamlit as st
-sns.set(style='dark')
-
-all_df = pd.read_csv("https://raw.githubusercontent.com/anandashadrina/BikeSharingDataset-Dicoding/main/dashboard/main_data.csv")
-    
-def create_daily_rentals_df(df):
-    daily_rentals_df = df.resample(rule='D', on='dteday').agg({
-        "registered": "sum",
-        "casual": "sum",
-        "cnt": "sum"
-    })
-    daily_rentals_df = daily_rentals_df.reset_index()
-    daily_rentals_df.rename(columns={
-        "registered": "total_registered",
-        "casual": "total_casual",
-        "cnt": "total_customer"
-    }, inplace=True)
-    
-    return daily_rentals_df
-
-def create_monthly_rentals_df(df):
-    monthly_rentals_df = df.resample(rule='M', on='dteday').agg({
-        "registered": "sum",
-        "casual": "sum",
-        "cnt": "sum"
-    })
-    monthly_rentals_df = monthly_rentals_df.reset_index()
-    monthly_rentals_df.rename(columns={
-        "registered": "total_registered",
-        "casual": "total_casual",
-        "cnt": "total_customer"
-    }, inplace=True)
-    
-    return monthly_rentals_df
-
-def create_byhour_df(df):
-    byhour_df = df.groupby(by="hr").cnt.sum().reset_index()
-    byhour_df.rename(columns={
-        "cnt": "total_customer"
-    }, inplace=True)
-
-    return byhour_df
-
-def create_byseasons_df(df):
-    byseason_df = df.groupby(by="season").cnt.sum().reset_index()
-    byseason_df.rename(columns={
-        "cnt": "total_customer"
-    }, inplace=True)
-    
-    return byseason_df
-
-def create_byweather_df(df):
-    byweather_df = df.groupby(by="weathersit").cnt.sum().reset_index()
-    byweather_df.rename(columns={
-        "cnt": "total_customer"
-    }, inplace=True)
-    
-    return byweather_df
-
-def create_clustering(df):
-    clustering = df.groupby(['weekday', 'hr'])['cnt'].sum().unstack()
-
-    return clustering
-
-datetime_columns = ["dteday"]
-all_df.sort_values(by="dteday", inplace=True)
-all_df.reset_index(inplace=True)
- 
-for column in datetime_columns:
-    all_df[column] = pd.to_datetime(all_df[column])
-
-min_date = all_df["dteday"].min()
-max_date = all_df["dteday"].max()
-
-with st.sidebar:
-    st.image("https://raw.githubusercontent.com/anandashadrina/BikeSharingDataset-Dicoding/main/dashboard/logo.png")
-    
-    start_date, end_date = st.date_input(
-        label='Rentang Waktu',min_value=min_date,
-        max_value=max_date,
-        value=[min_date, max_date]
-    )
-
-main_df = all_df[(all_df["dteday"] >= str(start_date)) & 
-                (all_df["dteday"] <= str(end_date))]
-
-
-byhour_df = create_byhour_df(main_df)
-daily_rentals_df = create_daily_rentals_df(main_df)
-monthly_rentals_df = create_monthly_rentals_df(main_df)
-byhour_df = create_byhour_df(main_df)
-byseason_df = create_byseasons_df(main_df)
-byweather_df = create_byweather_df(main_df)
-clustering = create_clustering(main_df)
-
-st.header('Bike Sharing Dashboard 🚲')
-
-st.subheader('Daily Rentals')
- 
-col1, col2, col3 = st.columns(3)
- 
-with col1:
-    total_rentals = daily_rentals_df.total_customer.sum()
-    st.metric("Total Rentals", value=total_rentals)
- 
-with col2:
-    total_registered = daily_rentals_df.total_registered.sum()
-    st.metric("Total Registered Customer", value=total_registered)
-
-with col3:
-    total_casual = daily_rentals_df.total_casual.sum()
-    st.metric("Total Casual Customer", value=total_casual)
-
-st.subheader('Monthly Rentals')
-fig, ax = plt.subplots(figsize=(16, 8))
-ax.plot(
-    monthly_rentals_df["dteday"],
-    monthly_rentals_df["total_customer"],
-    marker='o', 
-    linewidth=2,
-    color="skyblue"
-)
-ax.set_xlabel("Month", fontsize=15)
-ax.set_ylabel("Total Customers", fontsize=15)
-ax.set_title("Monthly Rentals (Total Customers)", fontsize=20)
-ax.tick_params(axis='y', labelsize=12)
-ax.tick_params(axis='x', labelsize=12)
-ax.grid(True)
-
-st.pyplot(fig)
-
 season_colors = {
-    'Winter': 'lightskyblue',
-    'Spring': 'lightgreen',
-    'Summer': 'gold',
-    'Fall': 'lightcoral'
+    'Spring': '#7FDBFF',   
+    'Summer': '#0074D9',   
+    'Fall': '#39CCCC',     
+    'Winter': '#001f3f'    
 }
 
 weather_colors = {
-    'Clear': '#FFDD57',               
-    'Cloudy': '#A9A9A9',              
-    'Light Snow/Rain': '#76C1FA',    
-    'Heavy Rain/Ice Pallets': '#045A8D'  
+    'Clear': '#2ECC40',                 
+    'Cloudy': '#3D9970',                
+    'Light Snow/Rain': '#AAAAAA',      
+    'Heavy Rain/Ice Pallets': '#111111' 
 }
 
+
+primaryColor = "#4C72B0"
+backgroundColor = "#f9f9f9"
+secondaryBackgroundColor = "#e0e0e0"
+textColor = "#262730"
+font = "sans serif"
 
 st.subheader("Rental Patterns")
  
@@ -320,7 +215,9 @@ with col2:
 st.subheader("Customer based on Hour")
 
 plt.figure(figsize=(10, 6))
+plt.figure(figsize=(10, 6))
 byhour_df.plot(kind='bar', color='#6BAED6',legend=False, edgecolor='none', linewidth=2)
+
 plt.title('Total Bike Rentals by Hour of the Day')
 plt.xlabel('Hour')
 plt.ylabel('total_customer')
@@ -380,4 +277,4 @@ ax.set_title("Percentage of Registered vs Casual Customer", fontsize=20 , pad=20
 st.pyplot(fig) 
 
 
-st.caption('Copyright © Fayiz Akbar 2025')
+st.caption('Copyright © fayiz Akbar Daifullah')
