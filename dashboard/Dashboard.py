@@ -4,7 +4,7 @@ import seaborn as sns
 import streamlit as st
 sns.set(style='dark')
     
-all_df = pd.read_csv('all_data.csv')
+all_df = pd.read_csv('dashboard/all_data.csv')
 
 season_map = {
     1: 'Spring',
