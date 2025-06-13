@@ -277,4 +277,4 @@ ax.set_title("Percentage of Registered vs Casual Customer", fontsize=20 , pad=20
 st.pyplot(fig) 
 
 
-st.caption('Copyright © fayiz Akbar Daifullah')
+st.caption('Copyright © Fayiz Akbar Daifullah')
