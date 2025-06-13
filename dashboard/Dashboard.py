@@ -4,12 +4,7 @@ import seaborn as sns
 import streamlit as st
 sns.set(style='dark')
     
-urls = [
-    "https://raw.githubusercontent.com/Fayiz-Akbar/AnalisisData-BikeShare-Dicoding/main/data/day.csv",
-    "https://raw.githubusercontent.com/Fayiz-Akbar/AnalisisData-BikeShare-Dicoding/main/data/hour.csv"
-]
-
-all_df = pd.concat([pd.read_csv(url) for url in urls], ignore_index=True)
+all_df = pd.read_csv('all_data.csv')
 
 season_map = {
     1: 'Spring',
