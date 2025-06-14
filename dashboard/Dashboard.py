@@ -34,7 +34,9 @@ min_date = hour_df["dteday"].min()
 max_date = hour_df["dteday"].max()
 
 with st.sidebar:
-    st.image("https://static.vecteezy.com/system/resources/previews/019/474/889/original/bike-sharing-services-isometric-icon-illustration-vector.jpg", use_container_width=True)
+    st.image(
+    "https://static.vecteezy.com/system/resources/previews/019/474/889/original/bike-sharing-services-isometric-icon-illustration-vector.jpg",
+    width=300 )
     start_date, end_date = st.date_input(
         label='Rentang Waktu',
         min_value=min_date,
