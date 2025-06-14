@@ -2,9 +2,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import streamlit as st
+
 sns.set(style='dark')
-    
-all_df = pd.read_csv('dashboard/all_data.csv')
+
+hour_df = pd.read_csv('dashboard/all_data.csv')
 
 season_map = {
     1: 'Spring',
@@ -12,264 +13,92 @@ season_map = {
     3: 'Fall',
     4: 'Winter'
 }
-
 weather_map = {
     1: 'Clear',
     2: 'Cloudy',
     3: 'Light Snow/Rain',
     4: 'Heavy Rain/Ice Pallets'
 }
-
-all_df['season'] = all_df['season'].map(season_map)
-all_df['weathersit'] = all_df['weathersit'].map(weather_map)
-
-
-def create_daily_rentals_df(df):
-    daily_rentals_df = df.resample(rule='D', on='dteday').agg({
-        "registered": "sum",
-        "casual": "sum",
-        "cnt": "sum"
-    })
-    daily_rentals_df = daily_rentals_df.reset_index()
-    daily_rentals_df.rename(columns={
-        "registered": "total_registered",
-        "casual": "total_casual",
-        "cnt": "total_customer"
-    }, inplace=True)
-    
-    return daily_rentals_df
-
-def create_monthly_rentals_df(df):
-    monthly_rentals_df = df.resample(rule='M', on='dteday').agg({
-        "registered": "sum",
-        "casual": "sum",
-        "cnt": "sum"
-    })
-    monthly_rentals_df = monthly_rentals_df.reset_index()
-    monthly_rentals_df.rename(columns={
-        "registered": "total_registered",
-        "casual": "total_casual",
-        "cnt": "total_customer"
-    }, inplace=True)
-    
-    return monthly_rentals_df
-
-def create_byhour_df(df):
-    byhour_df = df.groupby(by="hr").cnt.sum().reset_index()
-    byhour_df.rename(columns={
-        "cnt": "total_customer"
-    }, inplace=True)
-
-    return byhour_df
-
-def create_byseasons_df(df):
-    byseason_df = df.groupby(by="season").cnt.sum().reset_index()
-    byseason_df.rename(columns={
-        "cnt": "total_customer"
-    }, inplace=True)
-    
-    return byseason_df
-
-def create_byweather_df(df):
-    byweather_df = df.groupby(by="weathersit").cnt.sum().reset_index()
-    byweather_df.rename(columns={
-        "cnt": "total_customer"
-    }, inplace=True)
-    
-    return byweather_df
-
-def create_clustering(df):
-    clustering = df.groupby(['weekday', 'hr'])['cnt'].sum().unstack()
-
-    return clustering
+hour_df['season'] = hour_df['season'].map(season_map)
+hour_df['weathersit'] = hour_df['weathersit'].map(weather_map)
 
 datetime_columns = ["dteday"]
-all_df.sort_values(by="dteday", inplace=True)
-all_df.reset_index(inplace=True)
- 
+hour_df.sort_values(by="dteday", inplace=True)
+hour_df.reset_index(inplace=True)
 for column in datetime_columns:
-    all_df[column] = pd.to_datetime(all_df[column])
+    hour_df[column] = pd.to_datetime(hour_df[column])
 
-min_date = all_df["dteday"].min()
-max_date = all_df["dteday"].max()
+min_date = hour_df["dteday"].min()
+max_date = hour_df["dteday"].max()
 
 with st.sidebar:
-    st.image("https://static.vecteezy.com/system/resources/previews/019/474/889/original/bike-sharing-services-isometric-icon-illustration-vector.jpg")
-    
+    st.image("https://static.vecteezy.com/system/resources/previews/019/474/889/original/bike-sharing-services-isometric-icon-illustration-vector.jpg", use_container_width=True)
     start_date, end_date = st.date_input(
-        label='Rentang Waktu',min_value=min_date,
+        label='Rentang Waktu',
+        min_value=min_date,
         max_value=max_date,
         value=[min_date, max_date]
     )
 
-main_df = all_df[(all_df["dteday"] >= str(start_date)) & 
-                (all_df["dteday"] <= str(end_date))]
 
+hour_df = hour_df[(hour_df['dteday'] >= pd.to_datetime(start_date)) & (hour_df['dteday'] <= pd.to_datetime(end_date))]
 
-byhour_df = create_byhour_df(main_df)
-daily_rentals_df = create_daily_rentals_df(main_df)
-monthly_rentals_df = create_monthly_rentals_df(main_df)
-byhour_df = create_byhour_df(main_df)
-byseason_df = create_byseasons_df(main_df)
-byweather_df = create_byweather_df(main_df)
-clustering = create_clustering(main_df)
+st.subheader('Rata-rata Peminjaman Berdasarkan Cuaca dan Jenis Hari')
+if 'day_type' in hour_df.columns:
+    avg_rent_weather_daytype = hour_df.groupby(['weathersit', 'day_type'])['cnt'].mean().reset_index()
+    plt.figure(figsize=(8, 6))
+    sns.barplot(data=avg_rent_weather_daytype, x='weathersit', y='cnt', hue='day_type')
+    plt.xlabel('Kondisi Cuaca')
+    plt.ylabel('Rata-rata Jumlah Peminjaman')
+    plt.title('Rata-rata Peminjaman Sepeda')
+    st.pyplot(plt)
+else:
+    st.warning("Kolom 'day_type' tidak ditemukan dalam dataset.")
 
-st.header('Bike Sharing Dashboard 🚲')
-
-st.subheader('Daily Rentals')
- 
-col1, col2, col3 = st.columns(3)
- 
-with col1:
-    total_rentals = daily_rentals_df.total_customer.sum()
-    st.metric("Total Rentals", value=total_rentals)
- 
-with col2:
-    total_registered = daily_rentals_df.total_registered.sum()
-    st.metric("Total Registered Customer", value=total_registered)
-
-with col3:
-    total_casual = daily_rentals_df.total_casual.sum()
-    st.metric("Total Casual Customer", value=total_casual)
-
-st.subheader('Monthly Rentals')
-fig, ax = plt.subplots(figsize=(16, 8))
-ax.plot(
-    monthly_rentals_df["dteday"],
-    monthly_rentals_df["total_customer"],
-    marker='o', 
-    linewidth=2,
-    color="skyblue"
-)
-ax.set_xlabel("Month", fontsize=15)
-ax.set_ylabel("Total Customers", fontsize=15)
-ax.set_title("Monthly Rentals (Total Customers)", fontsize=20)
-ax.tick_params(axis='y', labelsize=12)
-ax.tick_params(axis='x', labelsize=12)
-ax.grid(True)
-
-st.pyplot(fig)
-
-season_colors = {
-    'Spring': '#7FDBFF',   
-    'Summer': '#0074D9',   
-    'Fall': '#39CCCC',     
-    'Winter': '#001f3f'    
-}
-
-weather_colors = {
-    'Clear': '#2ECC40',                 
-    'Cloudy': '#3D9970',                
-    'Light Snow/Rain': '#AAAAAA',      
-    'Heavy Rain/Ice Pallets': '#111111' 
-}
-
-
-primaryColor = "#4C72B0"
-backgroundColor = "#f9f9f9"
-secondaryBackgroundColor = "#e0e0e0"
-textColor = "#262730"
-font = "sans serif"
-
-st.subheader("Rental Patterns")
- 
-col1, col2 = st.columns(2)
- 
-with col1:
-    fig, ax = plt.subplots(figsize=(30,15))
-    sns.barplot(
-        y='total_customer', 
-        x='season',
-        data=byseason_df.sort_values(by='total_customer', ascending=False),
-        palette=season_colors,
-        ax=ax
-    )
-    ax.set_title("Customer based on Season", loc="center", fontsize=50, pad=20)
-    ax.set_ylabel(None)
-    ax.set_xlabel(None)
-    ax.tick_params(axis='x', labelsize=35)
-    ax.tick_params(axis='y', labelsize=30)
-    st.pyplot(fig)
-
-with col2:
-    fig, ax = plt.subplots(figsize=(30,15))
-    sns.barplot(
-        y='total_customer', 
-        x='weathersit',
-        data=byweather_df.sort_values(by='total_customer', ascending=False),
-        palette=weather_colors,
-        ax=ax
-    )
-    ax.set_title("Customer based on Weather", loc="center", fontsize=50, pad=20)
-    ax.set_ylabel(None)
-    ax.set_xlabel(None)
-    ax.tick_params(axis='x', labelsize=35)
-    ax.tick_params(axis='y', labelsize=30)
-    st.pyplot(fig)
-
-st.subheader("Customer based on Hour")
-
-plt.figure(figsize=(10, 6))
-plt.figure(figsize=(10, 6))
-byhour_df.plot(kind='bar', color='#6BAED6',legend=False, edgecolor='none', linewidth=2)
-
-plt.title('Total Bike Rentals by Hour of the Day')
-plt.xlabel('Hour')
-plt.ylabel('total_customer')
-plt.xticks(rotation=0)
-plt.grid(axis='y')
-plt.tight_layout()
+st.subheader('Rata-rata Peminjaman Sepeda per Jam')
+avg_by_hour = hour_df.groupby('hr')['cnt'].mean()
+plt.figure(figsize=(12, 6))
+avg_by_hour.plot(kind='line', marker='o')
+plt.title('Peminjaman Sepeda per Jam')
+plt.xlabel('Jam')
+plt.ylabel('Jumlah Rata-rata Peminjaman')
+plt.grid(True)
+plt.xticks(range(0, 24))
 st.pyplot(plt)
 
-st.subheader ("Customer Clustering by Day and Hour")
+monthly_rentals = hour_df.copy()
+monthly_rentals['mnth'] = monthly_rentals['dteday'].dt.strftime('%B')  
+monthly_rentals['yr'] = monthly_rentals['dteday'].dt.year.astype(str)   
 
-plt.figure(figsize=(12, 8))
-sns.heatmap(clustering, cmap="coolwarm", annot=False, fmt=".0f")
-plt.title('Bike Rentals Heatmap by Weekday and Hour')
-plt.xlabel('Hour of the Day')
-plt.ylabel('Day of the Week')
+monthly_rentals = monthly_rentals.groupby(['yr', 'mnth'])['cnt'].sum().reset_index()
 
-st.pyplot(plt)
 
-st.subheader('Registered Customer and Casual Customers')
+monthly_rentals['date'] = monthly_rentals['yr'] + '-' + monthly_rentals['mnth']
+monthly_rentals['date'] = pd.to_datetime(monthly_rentals['date'], format='%Y-%B')
+monthly_rentals = monthly_rentals.sort_values('date')
 
-fig, ax = plt.subplots(figsize=(16, 8))
-ax.plot(
-    monthly_rentals_df["dteday"],
-    monthly_rentals_df["total_registered"], 
-    marker='o', 
-    label='Registered Rentals')
-plt.plot(
-    monthly_rentals_df["dteday"], 
-    monthly_rentals_df["total_casual"], 
-    marker='o', 
-    label='Casual Rentals')
+st.subheader('Total Penyewaan Sepeda per Bulan')
+fig3, ax3 = plt.subplots(figsize=(14, 6))
+ax3.plot(monthly_rentals['date'], monthly_rentals['cnt'], marker='o', label='Total Rentals (cnt)', color='skyblue')
+ax3.set_title('Monthly Bike Rentals Over Two Years')
+ax3.set_xlabel('Tanggal')
+ax3.set_ylabel('Jumlah Peminjaman')
+ax3.legend()
+ax3.grid(True)
+plt.xticks(rotation=45)
+st.pyplot(fig3)
 
-ax.set_xlabel("Month")
-ax.set_ylabel("Total Customers")
-ax.set_title("Monthly Bike Rentals of Registered and Casual Customers")
-ax.tick_params(axis='y', labelsize=12)
-ax.tick_params(axis='x', labelsize=12)
-ax.legend(fontsize=12)
-ax.grid(True)
-
-st.pyplot(fig)
-
-typecust_colors = ['skyblue', 'gold']
-
-fig, ax = plt.subplots(figsize=(14,8))
-total_registered = daily_rentals_df['total_registered'].sum()
-total_casual = daily_rentals_df['total_casual'].sum()
-labels = ['Registered', 'Casual']
-sizes = [total_registered, total_casual]
-colors_typecust = ['#4C72B0', '#C44E52']  
-
-ax.pie(sizes, labels=labels, colors=typecust_colors, autopct='%1.1f%%', startangle=140, pctdistance=0.85, textprops={'fontsize': 14})
-
-ax.axis('equal')
-plt.tight_layout() 
-ax.set_title("Percentage of Registered vs Casual Customer", fontsize=20 , pad=20)
-st.pyplot(fig) 
-
+st.subheader('Heatmap Penyewaan Berdasarkan Cuaca dan Jenis Hari')
+if 'workingday' in hour_df.columns:
+    cluster_counts = hour_df.groupby(['weathersit', 'workingday'])['cnt'].sum().reset_index()
+    heatmap_data = cluster_counts.pivot(index='weathersit', columns='workingday', values='cnt')
+    plt.figure(figsize=(10, 6))
+    sns.heatmap(heatmap_data, annot=True, fmt='.0f', cmap='magma')
+    plt.xlabel('Hari Kerja (0 = Libur, 1 = Kerja)')
+    plt.ylabel('Kondisi Cuaca')
+    plt.title('Jumlah Penyewaan Sepeda')
+    st.pyplot(plt)
+else:
+    st.warning("Kolom 'workingday' tidak ditemukan dalam dataset.")
 
 st.caption('Copyright © Fayiz Akbar Daifullah 2025')
