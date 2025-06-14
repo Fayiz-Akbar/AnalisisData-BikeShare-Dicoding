@@ -22,6 +22,8 @@ weather_map = {
 hour_df['season'] = hour_df['season'].map(season_map)
 hour_df['weathersit'] = hour_df['weathersit'].map(weather_map)
 
+st.header('Bike Sharing Dashboard 🚲')
+
 datetime_columns = ["dteday"]
 hour_df.sort_values(by="dteday", inplace=True)
 hour_df.reset_index(inplace=True)
